@@ -1,0 +1,50 @@
+# 환경 파일
+.env
+.env.*
+!.env.example
+
+# 데이터 디렉토리
+data/videos/*
+data/cache/*
+data/history/*
+!data/videos/.gitkeep
+!data/cache/.gitkeep
+!data/history/.gitkeep
+
+# 로그 파일
+logs/*
+!logs/.gitkeep
+
+# Python 파일
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# MacOS 파일
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Docker 볼륨 데이터
+mongodb-data/
+redis-data/
+prometheus-data/
+
+# IDE 관련 파일
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 시스템 임시 파일
+*.log
+*.bak
+*.tmp
+.coverage
+htmlcov/
