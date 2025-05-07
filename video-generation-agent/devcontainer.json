@@ -1,0 +1,15 @@
+{
+  "name": "video-agent-devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-toolsai.jupyter"
+  ],
+  "postCreateCommand": "pip install -r requirements.txt && python -m spacy download en_core_web_sm && python -m spacy download ko_core_news_sm",
+  "remoteUser": "root"
+}

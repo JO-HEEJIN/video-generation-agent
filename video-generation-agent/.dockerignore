@@ -1,0 +1,16 @@
+venv/
+.venv/
+**/__pycache__
+**/*.pyc
+.git
+.gitignore
+.env
+!.env.example
+logs/*
+data/cache/*
+data/history/*
+data/videos/*
+tests/
+docs/
+**/.DS_Store
+README.md

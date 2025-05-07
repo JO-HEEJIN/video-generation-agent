@@ -1,0 +1,185 @@
+# # docker-compose.yml
+# # version: '3.8'
+
+# services:
+#   video-agent:
+#     build: .
+#     container_name: video-agent-app
+#     ports:
+#       - "8501:8501"
+#     environment:
+#       - REDIS_HOST=redis
+#       - MONGODB_URL=mongodb://admin:password@mongodb:27017
+#       - PYTHONUNBUFFERED=1
+#     volumes:
+#       - ./data:/app/data
+#       - ./logs:/app/logs
+#     depends_on:
+#       - redis
+#       - mongodb
+#     restart: unless-stopped
+#     healthcheck:
+#       test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   redis:
+#     image: redis:7.2
+#     container_name: video-agent-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis-data:/data
+#     restart: unless-stopped
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   mongodb:
+#     image: mongo:7.0
+#     container_name: video-agent-mongodb
+#     ports:
+#       - "27017:27017"
+#     environment:
+#       MONGO_INITDB_ROOT_USERNAME: admin
+#       MONGO_INITDB_ROOT_PASSWORD: password
+#     volumes:
+#       - mongodb-data:/data/db
+#     restart: unless-stopped
+#     healthcheck:
+#       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   prometheus:
+#     image: prom/prometheus:v2.40.0
+#     container_name: video-agent-prometheus
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - prometheus-data:/prometheus
+#     command:
+#       - '--config.file=/etc/prometheus/prometheus.yml'
+#       - '--storage.tsdb.path=/prometheus'
+#       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+#       - '--web.console.templates=/usr/share/prometheus/consoles'
+#     restart: unless-stopped
+
+# volumes:
+#   redis-data:
+#   mongodb-data:
+#   prometheus-data:
+
+
+version: '3.8'
+
+services:
+  video-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-agent-app
+    ports:
+      - "8501:8501"
+    environment:
+      - APP_ENV=production
+      - DATA_DIR=/app/data
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/video_agent?authSource=admin
+      - MONGODB_DB=video_agent
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./src:/app/src
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - video-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: video-agent-redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=redispass
+    volumes:
+      - redis-data:/data
+    networks:
+      - video-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "redispass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7.0
+    container_name: video-agent-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb-data:/data/db
+      # - ./mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - video-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--username", "admin", "--password", "password", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: video-agent-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - video-agent-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  redis-data:
+    driver: local
+  mongodb-data:
+    driver: local
+  prometheus-data:
+    driver: local
+
+networks:
+  video-agent-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
